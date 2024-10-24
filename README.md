@@ -9,8 +9,13 @@ API Restful to manage students
 - DELETE /students/:id - Delete a student
 
 # Struct Student:
-- Name 
-- CPF 
-- Email
-- Age
-- Active
+- Name string
+- CPF int
+- Email string
+- Age int
+- Active bool
+
+
+# Curl
+
+- curl localhost:8081/students
