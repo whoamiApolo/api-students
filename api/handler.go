@@ -2,9 +2,9 @@ package api
 
 import (
 	"errors"
-	"fmt"
 	"github.com/labstack/echo"
-	"github.com/whoamiApolo/api-students/db"
+	"github.com/rs/zerolog/log"
+	"github.com/whoamiApolo/api-students/schemas"
 	"gorm.io/gorm"
 	"net/http"
 	"strconv"
@@ -21,9 +21,22 @@ func (api *API) getStudents(c echo.Context) error {
 }
 
 func (api *API) createStudents(c echo.Context) error {
-	student := db.Student{}
-	if err := c.Bind(&student); err != nil {
+	studentReq := StudentRequest{}
+	if err := c.Bind(&studentReq); err != nil {
 		return err
+	}
+
+	if err := studentReq.Validate(); err != nil {
+		log.Error().Err(err).Msgf("[api] error validating student request")
+		return c.String(http.StatusBadRequest, "Error validating student")
+	}
+
+	student := schemas.Student{
+		Name:   studentReq.Name,
+		Email:  studentReq.Email,
+		CPF:    studentReq.CPF,
+		Age:    studentReq.Age,
+		Active: *studentReq.Active,
 	}
 
 	if err := api.DB.AddStudent(student); err != nil {
@@ -59,7 +72,7 @@ func (api *API) updateStudent(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "Failed to get student ID")
 	}
 
-	receivedStudent := db.Student{}
+	receivedStudent := schemas.Student{}
 	if err := c.Bind(&receivedStudent); err != nil {
 		return err
 	}
@@ -85,12 +98,30 @@ func (api *API) updateStudent(c echo.Context) error {
 }
 
 func (api *API) deleteStudent(c echo.Context) error {
-	id := c.Param("id")
-	deleteStud := fmt.Sprintf("Delete student with ID: %s", id)
-	return c.String(http.StatusOK, deleteStud)
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.String(http.StatusInternalServerError, "Failed to get student ID")
+	}
+
+	student, err := api.DB.GetStudent(id)
+	// não encontrar nenhum student com id
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return c.String(http.StatusNotFound, "Student not found")
+	}
+
+	// problema para encontrar o student
+	if err != nil {
+		return c.String(http.StatusInternalServerError, "Failed to get student")
+	}
+
+	if err := api.DB.DeleteStudent(student); err != nil {
+		return c.String(http.StatusInternalServerError, "Failed to delete student")
+	}
+
+	return c.JSON(http.StatusOK, student)
 }
 
-func updateStudentInfo(receivedStudent, updatingStudent db.Student) db.Student {
+func updateStudentInfo(receivedStudent, updatingStudent schemas.Student) schemas.Student {
 	if receivedStudent.Name != "" {
 		updatingStudent.Name = receivedStudent.Name
 	}
