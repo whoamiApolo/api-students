@@ -7,7 +7,8 @@ API Restful to manage students
 - GET /students/:id - Show a student
 - PUT /students/:id - Update a student
 - DELETE /students/:id - Delete a student
-
+- GET /students/active=<true/false> - List all active/non-active students
+- 
 # Struct Student:
 - Name string
 - CPF int
